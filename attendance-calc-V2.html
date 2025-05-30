@@ -9,93 +9,104 @@
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
-            background-color: #f7fafc; /* Tailwind gray-100 */
+            background-color: #f7fafc;
         }
         .table-cell {
-            padding: 0.75rem; /* py-3 px-3 equivalent */
+            padding: 0.75rem;
             border-bottom-width: 1px;
-            border-color: #e2e8f0; /* Tailwind gray-300 */
-            font-size: 0.875rem; /* text-sm */
+            border-color: #e2e8f0;
+            font-size: 0.875rem;
         }
         .header-cell {
             padding: 0.75rem;
             border-bottom-width: 1px;
-            border-color: #e2e8f0; /* Tailwind gray-300 */
-            background-color: #e9ebee; /* Tailwind gray-200 slightly adjusted */
-            font-size: 0.875rem; /* text-sm */
-            font-weight: 600; /* font-semibold */
-            color: #4a5568; /* Tailwind gray-700 */
+            border-color: #e2e8f0;
+            background-color: #e9ebee;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4a5568;
             text-align: left;
         }
         .header-cell-right {
             text-align: right;
         }
         .summary-card {
-            padding: 1rem; /* p-4 */
-            border-radius: 0.5rem; /* rounded-lg */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .summary-value {
-            font-weight: 700; /* font-bold */
-            font-size: 1.125rem; /* text-lg */
+            font-weight: 700;
+            font-size: 1.125rem;
         }
         .summary-label {
-            font-size: 0.875rem; /* text-sm */
-            color: #4a5568; /* text-gray-700 */
+            font-size: 0.875rem;
+            color: #4a5568;
         }
         .input-field {
-            border-color: #cbd5e0; /* Tailwind gray-400 */
-            border-radius: 0.375rem; /* rounded-md */
-            padding: 0.5rem 0.75rem; /* py-2 px-3 */
+            border-color: #cbd5e0;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
             width: 100%;
         }
         .input-field:focus {
             outline: none;
-            border-color: #4299e1; /* Tailwind blue-500 */
-            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5); /* focus:ring-2 focus:ring-blue-500 */
+            border-color: #4299e1;
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
         }
         .btn {
-            padding: 0.625rem 1.25rem; /* py-2.5 px-5 */
-            border-radius: 0.375rem; /* rounded-md */
-            font-weight: 500; /* font-medium */
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
             transition: background-color 0.2s ease-in-out;
             cursor: pointer;
         }
         .btn-primary {
-            background-color: #4f46e5; /* Tailwind indigo-600 */
+            background-color: #4f46e5;
             color: white;
         }
         .btn-primary:hover {
-            background-color: #4338ca; /* Tailwind indigo-700 */
+            background-color: #4338ca;
         }
         .btn-secondary {
-            background-color: #64748b; /* Tailwind slate-500 */
+            background-color: #64748b;
             color: white;
         }
         .btn-secondary:hover {
-            background-color: #475569; /* Tailwind slate-600 */
+            background-color: #475569;
         }
-         .btn-outline {
+        .btn-outline {
             background-color: transparent;
-            color: #4f46e5; /* Tailwind indigo-600 */
-            border: 1px solid #4f46e5; /* Tailwind indigo-600 */
+            color: #4f46e5;
+            border: 1px solid #4f46e5;
         }
         .btn-outline:hover {
-            background-color: #e0e7ff; /* Tailwind indigo-100 */
+            background-color: #e0e7ff;
         }
         #message-area {
-            min-height: 24px; /* Ensure space even when empty */
+            min-height: 24px;
             transition: opacity 0.3s ease-in-out;
         }
         .message-success {
-            color: #16a34a; /* Tailwind green-600 */
+            color: #16a34a;
         }
         .message-error {
-            color: #dc2626; /* Tailwind red-600 */
+            color: #dc2626;
         }
-        /* Hide the default file input */
         input[type="file"] {
             display: none;
+        }
+        .watermark {
+            position: fixed;
+            bottom: 12px;
+            right: 18px;
+            opacity: 0.18;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #4f46e5;
+            pointer-events: none;
+            z-index: 9999;
+            user-select: none;
         }
     </style>
 </head>
@@ -221,13 +232,10 @@
             </ul>
         </div>
     </div>
-
+    <div class="watermark">Attendance Calc V2 &copy; 2024</div>
     <script>
-        // --- Constants ---
-        const LOCAL_STORAGE_ENTRIES_KEY = 'localAttendanceAppEntries_v5'; // Updated key for new summary
-        const LOCAL_STORAGE_SETTINGS_KEY = 'localAttendanceAppSettings_v3'; // Updated settings key for target hours
-
-        // --- DOM Elements ---
+        const LOCAL_STORAGE_ENTRIES_KEY = 'localAttendanceAppEntries_v5';
+        const LOCAL_STORAGE_SETTINGS_KEY = 'localAttendanceAppSettings_v3';
         const attendanceForm = document.getElementById('attendance-form');
         const dateInput = document.getElementById('date');
         const timeInInput = document.getElementById('time-in');
@@ -236,108 +244,80 @@
         const messageArea = document.getElementById('message-area');
         const exportButton = document.getElementById('export-data-btn');
         const importFileInput = document.getElementById('import-file-input');
-
-        // Settings DOM elements
         const standardTimeInInput = document.getElementById('standard-time-in');
         const standardTimeOutInput = document.getElementById('standard-time-out');
         const lunchBreakDeductionInput = document.getElementById('lunch-break-deduction');
-        const targetHoursInput = document.getElementById('target-hours'); // New target hours input
-
-        // --- Default Settings ---
+        const targetHoursInput = document.getElementById('target-hours');
         const defaultSettings = {
             standardTimeIn: '08:00',
             standardTimeOut: '17:00',
             lunchBreakMinutes: 60,
-            targetHours: 160 // Default target hours
+            targetHours: 160
         };
-        let currentSettings = { ...defaultSettings }; // Initialize with defaults
-
-        // --- Core Logic ---
-
+        let currentSettings = { ...defaultSettings };
         document.addEventListener('DOMContentLoaded', () => {
-            loadSettings(); // Load settings first
-            loadAndDisplayData(); // Then load and display attendance data using loaded settings
-            addSettingsEventListeners(); // Add listeners after loading settings
+            loadSettings();
+            loadAndDisplayData();
+            addSettingsEventListeners();
         });
-        
-        // --- Settings Management ---
         function loadSettings() {
             const storedSettings = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
             try {
                 const parsedSettings = storedSettings ? JSON.parse(storedSettings) : {};
-                // Merge stored settings with defaults to ensure all properties exist
                 currentSettings = { ...defaultSettings, ...parsedSettings };
-                
-                // Populate input fields with loaded settings
                 standardTimeInInput.value = currentSettings.standardTimeIn;
                 standardTimeOutInput.value = currentSettings.standardTimeOut;
                 lunchBreakDeductionInput.value = currentSettings.lunchBreakMinutes;
-                targetHoursInput.value = currentSettings.targetHours; // Populate new target hours input
+                targetHoursInput.value = currentSettings.targetHours;
             } catch (error) {
-                console.error("Error parsing settings from localStorage:", error);
-                currentSettings = { ...defaultSettings }; // Fallback to defaults on error
+                currentSettings = { ...defaultSettings };
             }
         }
-
         function saveSettings() {
             currentSettings.standardTimeIn = standardTimeInInput.value;
             currentSettings.standardTimeOut = standardTimeOutInput.value;
-            currentSettings.lunchBreakMinutes = parseInt(lunchBreakDeductionInput.value) || 0; 
-            currentSettings.targetHours = parseFloat(targetHoursInput.value) || 0; // Save target hours
-
+            currentSettings.lunchBreakMinutes = parseInt(lunchBreakDeductionInput.value) || 0;
+            currentSettings.targetHours = parseFloat(targetHoursInput.value) || 0;
             localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(currentSettings));
-            loadAndDisplayData(); // Recalculate and re-render the table with new settings
+            loadAndDisplayData();
             showMessage("Settings saved and applied!", false);
         }
-
-        // Added this function to directly save settings object from import
         function saveSettingsToStorage(settings) {
-            // Ensure imported settings are merged with defaults to prevent missing properties
-            currentSettings = { ...defaultSettings, ...settings }; 
+            currentSettings = { ...defaultSettings, ...settings };
             localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(currentSettings));
-            loadSettings(); // Update input fields with new settings
+            loadSettings();
         }
-
         function addSettingsEventListeners() {
             standardTimeInInput.addEventListener('change', saveSettings);
             standardTimeOutInput.addEventListener('change', saveSettings);
             lunchBreakDeductionInput.addEventListener('change', saveSettings);
-            targetHoursInput.addEventListener('change', saveSettings); // Add listener for target hours
+            targetHoursInput.addEventListener('change', saveSettings);
         }
-
-        // --- Attendance Data Management ---
         function getStoredEntries() {
             const storedData = localStorage.getItem(LOCAL_STORAGE_ENTRIES_KEY);
             try {
                 const parsedData = storedData ? JSON.parse(storedData) : [];
-                // Basic validation: check if it's an array
                 return Array.isArray(parsedData) ? parsedData : [];
             } catch (error) {
-                console.error("Error parsing data from localStorage:", error);
-                return []; // Return empty array on error
+                return [];
             }
         }
-
         function saveEntriesToStorage(entries) {
             if (!Array.isArray(entries)) {
-                console.error("Attempted to save non-array data to localStorage.");
                 return;
             }
             entries.sort((a, b) => a.dateString.localeCompare(b.dateString));
             localStorage.setItem(LOCAL_STORAGE_ENTRIES_KEY, JSON.stringify(entries));
         }
-        
         function loadAndDisplayData() {
             const entries = getStoredEntries();
             renderTableAndSummary(entries);
         }
-
         attendanceForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const dateValue = dateInput.value; 
-            const timeInValue = timeInInput.value; 
+            const dateValue = dateInput.value;
+            const timeInValue = timeInInput.value;
             const timeOutValue = timeOutInput.value;
-
             if (!dateValue || !timeInValue || !timeOutValue) {
                 showMessage("All fields are required.", true);
                 return;
@@ -346,65 +326,53 @@
                 showMessage("Time Out must be after Time In.", true);
                 return;
             }
-
             const newEntry = {
-                id: Date.now().toString() + Math.random().toString(36).substring(2, 7), // More robust local ID
-                dateString: dateValue, 
+                id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+                dateString: dateValue,
                 inTime: timeInValue,
                 outTime: timeOutValue,
             };
-
             const entries = getStoredEntries();
             entries.push(newEntry);
             saveEntriesToStorage(entries);
-            
-            renderTableAndSummary(entries); 
+            renderTableAndSummary(entries);
             showMessage("Entry added successfully!", false);
-            attendanceForm.reset(); 
+            attendanceForm.reset();
         });
-        
         function deleteEntry(entryId) {
             if (!entryId) {
                 showMessage("Cannot delete entry: Entry ID missing.", true);
                 return;
             }
-            showMessage("Deleting entry...", false); 
-            
+            showMessage("Deleting entry...", false);
             let entries = getStoredEntries();
             entries = entries.filter(entry => entry.id !== entryId);
             saveEntriesToStorage(entries);
-            
-            renderTableAndSummary(entries); 
+            renderTableAndSummary(entries);
             showMessage("Entry deleted successfully.", false);
         }
-
-        // --- Export Functionality ---
         exportButton.addEventListener('click', () => {
             const entries = getStoredEntries();
-            // Create an object containing both entries and settings
             const dataToExport = {
                 entries: entries,
                 settings: currentSettings
             };
-
             if (entries.length === 0 && Object.keys(currentSettings).length === 0) {
                 showMessage("No data or settings to export.", true);
                 return;
             }
-            const jsonData = JSON.stringify(dataToExport, null, 2); // Pretty print JSON
+            const jsonData = JSON.stringify(dataToExport, null, 2);
             const blob = new Blob([jsonData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'attendance_data_and_settings.json'; // New filename
+            a.download = 'attendance_data_and_settings.json';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showMessage("Data and settings exported successfully!", false);
         });
-
-        // --- Import Functionality ---
         importFileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) {
@@ -413,141 +381,107 @@
             }
             if (file.type !== "application/json") {
                 showMessage("Invalid file type. Please select a .json file.", true);
-                importFileInput.value = ''; // Reset file input
+                importFileInput.value = '';
                 return;
             }
-
-            showMessage("Importing data. This will replace existing data and settings...", false); 
-
+            showMessage("Importing data. This will replace existing data and settings...", false);
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     const importedData = JSON.parse(e.target.result);
                     let importedEntries = [];
                     let importedSettings = {};
-
-                    // Check if the imported data has the new structure (entries + settings)
                     if (importedData && typeof importedData === 'object' && importedData.entries && importedData.settings) {
                         importedEntries = importedData.entries;
                         importedSettings = importedData.settings;
                     } else if (Array.isArray(importedData)) {
-                        // Backward compatibility: Assume it's an old export (only entries array)
                         importedEntries = importedData;
-                        importedSettings = defaultSettings; // Use default settings for old format
+                        importedSettings = defaultSettings;
                         showMessage("Old format detected. Importing entries only. Default settings applied.", false);
                     } else {
                         showMessage("Invalid data structure in the imported file. Please ensure it's a valid attendance export.", true);
                         return;
                     }
-
-                    // Basic validation for entries
                     if (importedEntries.length > 0 && (!importedEntries[0].id || !importedEntries[0].dateString || !importedEntries[0].inTime || !importedEntries[0].outTime)) {
                         showMessage("Invalid entries structure in the imported file. Some entry fields are missing.", true);
                         return;
                     }
-
-                    // Basic validation for settings (optional, but good practice)
-                    // Ensure all new settings are present, otherwise use defaults
                     importedSettings = { 
                         ...defaultSettings, 
                         ...importedSettings,
                         lunchBreakMinutes: parseInt(importedSettings.lunchBreakMinutes) || defaultSettings.lunchBreakMinutes,
                         targetHours: parseFloat(importedSettings.targetHours) || defaultSettings.targetHours
                     };
-                    
-                    saveEntriesToStorage(importedEntries); // Replace existing entries
-                    saveSettingsToStorage(importedSettings); // Replace existing settings and update UI
-                    
-                    loadAndDisplayData(); // Reload and re-render the table and summary
+                    saveEntriesToStorage(importedEntries);
+                    saveSettingsToStorage(importedSettings);
+                    loadAndDisplayData();
                     showMessage("Data and settings imported successfully! Current data and settings have been replaced.", false);
                 } catch (error) {
-                    console.error("Error parsing imported JSON:", error);
                     showMessage(`Error importing file: ${error.message}. Ensure the file is valid JSON.`, true);
                 } finally {
-                    importFileInput.value = ''; // Reset file input regardless of outcome
+                    importFileInput.value = '';
                 }
             };
             reader.onerror = () => {
                  showMessage("Error reading the selected file.", true);
-                 importFileInput.value = ''; // Reset file input
+                 importFileInput.value = '';
             };
             reader.readAsText(file);
         });
-
-
         function renderTableAndSummary(entries) {
-            attendanceTableBody.innerHTML = ''; 
-            
+            attendanceTableBody.innerHTML = '';
             if (!Array.isArray(entries) || entries.length === 0) {
                 attendanceTableBody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-500">No attendance data yet. Add an entry or import data.</td></tr>';
-                 // Reset summary if no entries
                 document.getElementById('total-days').textContent = 0;
-                document.getElementById('target-hours-display').textContent = currentSettings.targetHours + " hours"; // Display target hours
+                document.getElementById('target-hours-display').textContent = currentSettings.targetHours + " hours";
                 document.getElementById('total-actual-hours').textContent = "0.00 hours";
-                document.getElementById('remaining-hours').textContent = currentSettings.targetHours.toFixed(2) + " hours"; // Initially remaining is target
+                document.getElementById('remaining-hours').textContent = currentSettings.targetHours.toFixed(2) + " hours";
                 document.getElementById('remaining-days').textContent = "0 days";
                 document.getElementById('total-late').textContent = "0 minutes";
                 document.getElementById('total-excess').textContent = "0 minutes";
                 document.getElementById('total-late-deduction').textContent = "0 minutes";
                 return;
             }
-
             let totalActualWorkedHoursNet = 0;
             let totalLateMinutes = 0;
             let totalExcessMinutes = 0;
-            const lunchBreakMinutes = currentSettings.lunchBreakMinutes; 
-            const lunchBreakHours = lunchBreakMinutes / 60; // Convert minutes to hours for duration calculation
-
-            // Use configurable standard times
+            const lunchBreakMinutes = currentSettings.lunchBreakMinutes;
+            const lunchBreakHours = lunchBreakMinutes / 60;
             const [stdInHours, stdInMinutes] = currentSettings.standardTimeIn.split(':').map(Number);
-            const standardInTimeFixedDate = new Date(2000, 0, 1, stdInHours, stdInMinutes, 0, 0); 
-            
+            const standardInTimeFixedDate = new Date(2000, 0, 1, stdInHours, stdInMinutes, 0, 0);
             const [stdOutHours, stdOutMinutes] = currentSettings.standardTimeOut.split(':').map(Number);
             const standardOutTimeFixedDate = new Date(2000, 0, 1, stdOutHours, stdOutMinutes, 0, 0);
-
             const sortedEntries = [...entries].sort((a, b) => a.dateString.localeCompare(b.dateString));
-
             sortedEntries.forEach((record, index) => {
                 const [inHours, inMinutes] = record.inTime.split(':').map(Number);
                 const inTimeObj = new Date(2000, 0, 1, inHours, inMinutes);
-
                 const [outHours, outMinutes] = record.outTime.split(':').map(Number);
                 const outTimeObj = new Date(2000, 0, 1, outHours, outMinutes);
-
                 let lateMinutes = 0;
-                // Calculate late minutes based on configurable standard in time
                 if (inTimeObj > standardInTimeFixedDate) {
                     lateMinutes = Math.round((inTimeObj.getTime() - standardInTimeFixedDate.getTime()) / (1000 * 60));
                 }
-
                 let excessMinutes = 0;
-                // Calculate excess minutes based on configurable standard out time
                 if (outTimeObj > standardOutTimeFixedDate) {
                     excessMinutes = Math.round((outTimeObj.getTime() - standardOutTimeFixedDate.getTime()) / (1000 * 60));
                 }
-                
                 let grossDailyDurationMillis = outTimeObj.getTime() - inTimeObj.getTime();
                 if (grossDailyDurationMillis < 0) { 
                      grossDailyDurationMillis += 24 * 60 * 60 * 1000;
                 }
                 const grossDailyDurationHours = grossDailyDurationMillis / (1000 * 60 * 60);
-                // Deduct configurable lunch break (already converted to hours)
                 const netDailyDurationHours = Math.max(0, grossDailyDurationHours - lunchBreakHours);
-
                 totalActualWorkedHoursNet += netDailyDurationHours;
                 totalLateMinutes += lateMinutes;
                 totalExcessMinutes += excessMinutes;
-
                 const row = attendanceTableBody.insertRow();
                 row.insertCell().textContent = index + 1;
-                row.insertCell().textContent = record.dateString; 
+                row.insertCell().textContent = record.dateString;
                 row.insertCell().textContent = record.inTime;
                 row.insertCell().textContent = record.outTime;
-                
                 const durationCell = row.insertCell();
                 durationCell.textContent = netDailyDurationHours.toFixed(2);
                 durationCell.classList.add('text-right');
-
                 const lateCell = row.insertCell();
                 lateCell.textContent = lateMinutes > 0 ? lateMinutes : '0';
                 lateCell.classList.add('text-right');
@@ -556,7 +490,6 @@
                 } else {
                     lateCell.classList.add('text-gray-700');
                 }
-                
                 const excessCell = row.insertCell();
                 excessCell.textContent = excessMinutes > 0 ? excessMinutes : '0';
                 excessCell.classList.add('text-right');
@@ -565,7 +498,6 @@
                 } else {
                     excessCell.classList.add('text-gray-700');
                 }
-
                 const actionsCell = row.insertCell();
                 actionsCell.classList.add('text-right');
                 const deleteButton = document.createElement('button');
@@ -573,7 +505,6 @@
                 deleteButton.classList.add('text-red-500', 'hover:text-red-700', 'text-xs', 'font-medium', 'px-2', 'py-1', 'rounded', 'border', 'border-red-300', 'hover:bg-red-50');
                 deleteButton.onclick = () => deleteEntry(record.id);
                 actionsCell.appendChild(deleteButton);
-
                 Array.from(row.cells).forEach(cell => {
                     cell.classList.add('table-cell');
                     if (index % 2 !== 0) { 
@@ -581,41 +512,28 @@
                     }
                 });
             });
-
             const totalDays = sortedEntries.length;
             document.getElementById('total-days').textContent = totalDays;
-            
-            // Display Target Hours
             document.getElementById('target-hours-display').textContent = currentSettings.targetHours.toFixed(0) + " hours";
-
-            // Calculate Remaining Hours
             const remainingHours = currentSettings.targetHours - totalActualWorkedHoursNet;
             document.getElementById('remaining-hours').textContent = remainingHours.toFixed(2) + " hours";
-
-            // Calculate Standard Daily Net Work Hours for Remaining Days calculation
             const standardWorkDurationMillis = standardOutTimeFixedDate.getTime() - standardInTimeFixedDate.getTime();
             const standardWorkDurationHoursGross = standardWorkDurationMillis / (1000 * 60 * 60);
             const standardDailyNetWorkHours = Math.max(0, standardWorkDurationHoursGross - lunchBreakHours);
-
-            // Calculate Remaining Days
             let remainingDays = 0;
             if (standardDailyNetWorkHours > 0) {
                 remainingDays = remainingHours / standardDailyNetWorkHours;
             }
             document.getElementById('remaining-days').textContent = remainingDays.toFixed(1) + " days";
-
             document.getElementById('total-actual-hours').textContent = totalActualWorkedHoursNet.toFixed(2) + " hours";
             document.getElementById('total-late').textContent = totalLateMinutes + " minutes";
             document.getElementById('total-excess').textContent = totalExcessMinutes + " minutes";
-            
-            // Calculate Total Late Deduction
             const totalLateDeduction = Math.max(0, totalLateMinutes - totalExcessMinutes);
             document.getElementById('total-late-deduction').textContent = totalLateDeduction + " minutes";
         }
-
         function showMessage(msg, isError = false) {
             messageArea.textContent = msg;
-            messageArea.className = 'mt-3 text-sm text-center'; // Removed trailing space
+            messageArea.className = 'mt-3 text-sm text-center';
             if (isError) {
                 messageArea.classList.add('message-error');
             } else {
@@ -623,8 +541,8 @@
             }
             setTimeout(() => {
                 messageArea.textContent = '';
-                messageArea.className = 'mt-3 text-sm text-center'; // Removed trailing space
-            }, 5000); // Increased timeout for messages
+                messageArea.className = 'mt-3 text-sm text-center';
+            }, 5000);
         }
     </script>
 </body>
