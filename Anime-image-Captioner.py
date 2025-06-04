@@ -116,10 +116,6 @@ def generate_caption_for_image_core(image_obj: Image.Image, processor_instance, 
     generation_thread.join()
     full_caption = "".join(caption_parts).strip()
     
-    # Remove the stop_sequence string if it's part of the output
-    if full_caption.endswith(stop_sequence_str):
-        full_caption = full_caption[:-len(stop_sequence_str)].strip()
-        
     return full_caption
 
 # --- File Handling ---
