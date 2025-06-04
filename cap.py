@@ -18,24 +18,24 @@ except ImportError:
     GUI_AVAILABLE = False
     # print("Tkinter not found. UI mode will not be available.")
 
-# run commands
+# CLI run commands
 # image to folder or image
-# python cap.py /path/to/your/image.jpg
-# python cap.py /path/to/your/folder/
+# python Anime-image-Captioner.py /path/to/your/image.jpg
+# python Anime-image-Captioner.py /path/to/your/folder/
 # cuda device
-# python caption_images.py /path/to/your/image.jpg --device cpu
-# python caption_images.py /path/to/your/image.jpg --device cuda
+# python Anime-image-Captioner /path/to/your/image.jpg --device cpu
+# python Anime-image-Captioner /path/to/your/image.jpg --device cuda
 # torch data
-# python caption_images.py /path/to/your/image.jpg --dtype float16
-# python caption_images.py /path/to/your/image.jpg --dtype float32
-
-# requirements
-# pip install torch torchvision torchaudio transformers Pillow accelerate
+# python Anime-image-Captioner.py /path/to/your/image.jpg --dtype float16
+# python Anime-image-Captioner.py /path/to/your/image.jpg --dtype float32
+# output length
+# python Anime-image-Captioner.py /path/to/image.jpg --max_tokens 768
+# python Anime-image-Captioner.py /path/to/folder/ --max_tokens 1024
 
 # --- Configuration ---
 BASE_MODEL_ID = "Andres77872/SmolVLM-500M-anime-caption-v0.2"
 SUPPORTED_IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')
-TokenLength = 512
+DEFAULT_MAX_NEW_TOKENS = 1024 # Default value for max token output
 
 # --- Model Components (Global) ---
 PROCESSOR = None
@@ -72,13 +72,10 @@ def prepare_model_inputs(image: Image.Image, processor_instance, model_instance)
     return inputs
 
 # --- Image Processing and Caption Generation ---
-def generate_caption_for_image_core(image_obj: Image.Image, processor_instance, model_instance, ui_update_callback=None, image_name_for_log="image"):
-    """
-    Core logic for generating a caption for a given PIL Image object.
-    Returns the caption string.
-    `ui_update_callback` is a function to send text chunks to the UI.
-    `image_name_for_log` is used for console printing.
-    """
+def generate_caption_for_image_core(image_obj: Image.Image, processor_instance, model_instance, 
+                                    max_new_tokens_val=DEFAULT_MAX_NEW_TOKENS, 
+                                    ui_update_callback=None, image_name_for_log="image"):
+    #Core logic for generating a caption for a given PIL Image object.
     model_inputs = prepare_model_inputs(image_obj, processor_instance, model_instance)
     stop_sequence_str = "</RATING>"
     streamer = TextIteratorStreamer(
@@ -88,7 +85,10 @@ def generate_caption_for_image_core(image_obj: Image.Image, processor_instance, 
         StopOnTokens(processor_instance.tokenizer, stop_sequence_str)
     ])
     generation_kwargs = dict(
-        **model_inputs, streamer=streamer, do_sample=False, max_new_tokens=TokenLength,
+        **model_inputs, 
+        streamer=streamer, 
+        do_sample=False, 
+        max_new_tokens=max_new_tokens_val, # Use the passed or default value
         pad_token_id=processor_instance.tokenizer.pad_token_id,
         stopping_criteria=custom_stopping_criteria,
     )
@@ -98,41 +98,40 @@ def generate_caption_for_image_core(image_obj: Image.Image, processor_instance, 
 
     caption_parts = []
     if not ui_update_callback: # If no UI callback, print to console (CLI mode)
-        print(f"  Caption for {image_name_for_log}: ", end="")
+        print(f"  Caption for {image_name_for_log} (max_tokens: {max_new_tokens_val}): ", end="")
 
     for new_text_chunk in streamer:
         if ui_update_callback:
-            ui_update_callback(new_text_chunk) # Send chunk to UI
+            ui_update_callback(new_text_chunk)
         else:
-            print(new_text_chunk, end="", flush=True) # Print to console
+            print(new_text_chunk, end="", flush=True)
         caption_parts.append(new_text_chunk)
     
     if not ui_update_callback:
-        print() # Newline after console print
+        print()
 
     generation_thread.join()
     full_caption = "".join(caption_parts).strip()
+    
+    # Remove the stop_sequence string if it's part of the output
     if full_caption.endswith(stop_sequence_str):
         full_caption = full_caption[:-len(stop_sequence_str)].strip()
+        
     return full_caption
 
 # --- File Handling ---
 def save_caption_to_file(caption: str, image_file_path: str, is_url_image=False):
     if caption is None or not caption.strip():
         print(f"  Skipping save for {image_file_path} due to empty or no caption.")
-        return None # Indicate failure or skip
+        return None 
 
     if is_url_image:
-        # For URL images, save with a timestamp in the script's directory
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        # Get the base name of the URL, try to make it a valid filename
-        base_url_name = os.path.basename(image_file_path).split('?')[0] # Remove query params
+        base_url_name = os.path.basename(image_file_path).split('?')[0] 
         valid_chars = "-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        simple_url_name = ''.join(c for c in base_url_name if c in valid_chars)
-        simple_url_name = simple_url_name[:50] # Limit length
-
+        simple_url_name = ''.join(c for c in base_url_name if c in valid_chars)[:50]
         output_filename = f"url_image_{simple_url_name}_{timestamp}.txt"
-        output_txt_path = os.path.join(os.getcwd(), output_filename) # Save in current dir
+        output_txt_path = os.path.join(os.getcwd(), output_filename) 
     else:
         base_name, _ = os.path.splitext(image_file_path)
         output_txt_path = base_name + ".txt"
@@ -141,7 +140,7 @@ def save_caption_to_file(caption: str, image_file_path: str, is_url_image=False)
         with open(output_txt_path, "w", encoding="utf-8") as f:
             f.write(caption)
         print(f"  Caption successfully saved to: {output_txt_path}")
-        return output_txt_path # Return path of saved file
+        return output_txt_path 
     except Exception as e:
         print(f"  Error saving caption to {output_txt_path}: {e}")
         return None
@@ -150,7 +149,7 @@ def save_caption_to_file(caption: str, image_file_path: str, is_url_image=False)
 def load_model_and_processor(device="auto", dtype_str="bfloat16", status_update_func=None):
     global PROCESSOR, MODEL, MODEL_LOADED
     
-    with MODEL_LOADING_LOCK: # Ensure only one thread tries to load
+    with MODEL_LOADING_LOCK: 
         if MODEL_LOADED:
             if status_update_func: status_update_func("Model already loaded.")
             return True
@@ -176,61 +175,68 @@ def load_model_and_processor(device="auto", dtype_str="bfloat16", status_update_
             error_msg = f"Fatal Error: Could not load model or processor: {e}"
             if status_update_func: status_update_func(error_msg)
             print(error_msg)
-            # (Additional error details from original script)
             return False
 
 # --- Tkinter Application Class ---
+# We dont touch anything below this point
 if GUI_AVAILABLE:
     class CaptionApp:
-        def __init__(self, root):
-            self.root = root
+        def __init__(self, root_window):
+            self.root = root_window
             self.root.title("Image Captioner")
-            self.root.geometry("700x750") # Increased height for preview
+            self.root.geometry("700x800") # Increased height for new field
 
             # --- UI Frames ---
-            control_frame = ttk.Frame(root, padding="10")
+            control_frame = ttk.Frame(self.root, padding="10")
             control_frame.pack(fill=tk.X)
 
-            image_preview_frame = ttk.LabelFrame(root, text="Image Preview", padding="10")
+            image_preview_frame = ttk.LabelFrame(self.root, text="Image Preview", padding="10")
             image_preview_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
             
-            output_frame = ttk.LabelFrame(root, text="Generated Caption", padding="10")
+            output_frame = ttk.LabelFrame(self.root, text="Generated Caption", padding="10")
             output_frame.pack(fill=tk.X, padx=10, pady=5)
             
-            status_frame = ttk.Frame(root, padding="10")
+            status_frame = ttk.Frame(self.root, padding="10")
             status_frame.pack(fill=tk.X)
 
             # --- Controls ---
             # File Selection
             ttk.Button(control_frame, text="Select Image File", command=self.select_image_file).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
             self.file_path_label = ttk.Label(control_frame, text="No file selected")
-            self.file_path_label.grid(row=0, column=1, columnspan=2, padx=5, pady=5, sticky="w")
+            self.file_path_label.grid(row=0, column=1, columnspan=3, padx=5, pady=5, sticky="w") # Span 3 for new layout
 
             # Folder Selection
             ttk.Button(control_frame, text="Select Folder", command=self.select_folder).grid(row=1, column=0, padx=5, pady=5, sticky="ew")
             self.folder_path_label = ttk.Label(control_frame, text="No folder selected")
-            self.folder_path_label.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky="w")
+            self.folder_path_label.grid(row=1, column=1, columnspan=3, padx=5, pady=5, sticky="w")
 
             # URL Input
             ttk.Label(control_frame, text="Image URL:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
             self.url_entry = ttk.Entry(control_frame, width=50)
-            self.url_entry.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+            self.url_entry.grid(row=2, column=1, columnspan=3, padx=5, pady=5, sticky="ew")
+
+            # Max New Tokens Input
+            ttk.Label(control_frame, text="Max New Tokens:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+            self.max_tokens_var = tk.StringVar(value=str(DEFAULT_MAX_NEW_TOKENS))
+            self.max_tokens_entry = ttk.Entry(control_frame, textvariable=self.max_tokens_var, width=10)
+            self.max_tokens_entry.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+
 
             # Generate Button
             self.generate_button = ttk.Button(control_frame, text="Generate Caption(s)", command=self.start_captioning_process)
-            self.generate_button.grid(row=3, column=0, columnspan=2, padx=5, pady=10)
+            self.generate_button.grid(row=4, column=0, columnspan=2, padx=5, pady=10) # Adjusted row
             
-            control_frame.columnconfigure(1, weight=1) # Make entry field expand
+            control_frame.columnconfigure(1, weight=1) 
 
             # --- Image Preview ---
             self.image_preview_label = ttk.Label(image_preview_frame, text="Preview will appear here")
             self.image_preview_label.pack(padx=5, pady=5, expand=True, fill=tk.BOTH)
-            self.current_pil_image = None # To hold the PIL image for preview
-            self.current_tk_image = None # To hold the PhotoImage to prevent garbage collection
+            self.current_pil_image = None 
+            self.current_tk_image = None 
 
 
             # --- Output Area ---
-            self.caption_text = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD, height=8, state=tk.DISABLED)
+            self.caption_text = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD, height=10, state=tk.DISABLED) # Increased height
             self.caption_text.pack(fill=tk.X, expand=True, padx=5, pady=5)
 
             # --- Status Bar & Progress Bar ---
@@ -239,9 +245,16 @@ if GUI_AVAILABLE:
             self.progress_bar = ttk.Progressbar(status_frame, orient="horizontal", length=200, mode="determinate")
             self.progress_bar.pack(side=tk.RIGHT, padx=5)
 
-            # Store paths
             self.selected_file_path = None
             self.selected_folder_path = None
+
+        def _get_max_tokens_from_ui(self):
+            try:
+                val = int(self.max_tokens_var.get())
+                if val <= 0: return DEFAULT_MAX_NEW_TOKENS # Basic validation
+                return val
+            except ValueError:
+                return DEFAULT_MAX_NEW_TOKENS # Fallback if not a valid integer
 
         def _update_status(self, message):
             self.status_label.config(text=message)
@@ -250,7 +263,7 @@ if GUI_AVAILABLE:
         def _update_caption_display(self, chunk):
             self.caption_text.config(state=tk.NORMAL)
             self.caption_text.insert(tk.END, chunk)
-            self.caption_text.see(tk.END) # Scroll to the end
+            self.caption_text.see(tk.END) 
             self.caption_text.config(state=tk.DISABLED)
             self.root.update_idletasks()
         
@@ -262,36 +275,27 @@ if GUI_AVAILABLE:
         def _clear_image_preview(self):
             self.image_preview_label.config(image='', text="Preview will appear here")
             self.current_pil_image = None
-            self.current_tk_image = None # Important to clear this
+            self.current_tk_image = None 
 
         def _display_image_preview(self, image_path_or_pil_obj):
             self._clear_image_preview()
             try:
-                if isinstance(image_path_or_pil_obj, str): # It's a path
+                if isinstance(image_path_or_pil_obj, str): 
                     pil_img = Image.open(image_path_or_pil_obj).convert("RGB")
-                elif isinstance(image_path_or_pil_obj, Image.Image): # It's a PIL Image object
+                elif isinstance(image_path_or_pil_obj, Image.Image): 
                     pil_img = image_path_or_pil_obj
                 else:
                     self._update_status("Error: Invalid image source for preview.")
                     return
 
-                self.current_pil_image = pil_img # Store the PIL image
-
-                # Resize for preview if too large
+                self.current_pil_image = pil_img 
                 max_width = self.image_preview_label.winfo_width() if self.image_preview_label.winfo_width() > 10 else 400
                 max_height = self.image_preview_label.winfo_height() if self.image_preview_label.winfo_height() > 10 else 300
-                
-                img_copy = pil_img.copy() # Work on a copy
-                img_copy.thumbnail((max_width - 20, max_height - 20), Image.Resampling.LANCZOS) # -20 for padding
-                
-                self.current_tk_image = ImageTk.PhotoImage(img_copy) # Keep a reference!
+                img_copy = pil_img.copy() 
+                img_copy.thumbnail((max_width - 20, max_height - 20), Image.Resampling.LANCZOS) 
+                self.current_tk_image = ImageTk.PhotoImage(img_copy) 
                 self.image_preview_label.config(image=self.current_tk_image, text="")
                 self.root.update_idletasks()
-
-            except FileNotFoundError:
-                self._update_status(f"Preview Error: Image file not found.")
-            except UnidentifiedImageError:
-                self._update_status(f"Preview Error: Cannot identify image file.")
             except Exception as e:
                 self._update_status(f"Preview Error: {e}")
                 print(f"Image preview error: {e}")
@@ -305,8 +309,8 @@ if GUI_AVAILABLE:
             )
             if filepath:
                 self.selected_file_path = filepath
-                self.selected_folder_path = None # Clear folder selection
-                self.url_entry.delete(0, tk.END) # Clear URL entry
+                self.selected_folder_path = None 
+                self.url_entry.delete(0, tk.END) 
                 self.file_path_label.config(text=os.path.basename(filepath))
                 self.folder_path_label.config(text="No folder selected")
                 self._update_status(f"Selected file: {os.path.basename(filepath)}")
@@ -317,35 +321,31 @@ if GUI_AVAILABLE:
             folderpath = filedialog.askdirectory(title="Select Folder Containing Images")
             if folderpath:
                 self.selected_folder_path = folderpath
-                self.selected_file_path = None # Clear file selection
-                self.url_entry.delete(0, tk.END) # Clear URL entry
+                self.selected_file_path = None 
+                self.url_entry.delete(0, tk.END) 
                 self.folder_path_label.config(text=os.path.basename(folderpath))
                 self.file_path_label.config(text="No file selected")
                 self._update_status(f"Selected folder: {os.path.basename(folderpath)}")
-                # Optionally, preview the first image in the folder
                 first_image = next((os.path.join(folderpath, f) for f in os.listdir(folderpath) if f.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS)), None)
                 if first_image:
                     self._display_image_preview(first_image)
                 else:
-                    self._update_status(f"Selected folder: {os.path.basename(folderpath)}. No previewable images found immediately.")
+                    self._update_status(f"Selected folder: {os.path.basename(folderpath)}. No previewable images found.")
 
 
         def start_captioning_process(self):
             if not MODEL_LOADED:
                 self._update_status("Model not loaded. Attempting to load...")
                 self.generate_button.config(state=tk.DISABLED)
-                # Load model in a separate thread to not freeze UI
-                # Using default device and dtype for UI mode for simplicity
                 threading.Thread(target=self._load_model_and_then_caption, daemon=True).start()
             else:
                 self._initiate_caption_generation_thread()
         
         def _load_model_and_then_caption(self):
-            # Default device and dtype for UI mode
             success = load_model_and_processor(device="auto", dtype_str="bfloat16", status_update_func=self._update_status)
-            self.root.after(0, self.generate_button.config, {"state": tk.NORMAL}) # Re-enable button on main thread
+            self.root.after(0, self.generate_button.config, {"state": tk.NORMAL}) 
             if success:
-                self.root.after(0, self._initiate_caption_generation_thread) # Proceed to captioning
+                self.root.after(0, self._initiate_caption_generation_thread) 
             else:
                 self.root.after(0, self._update_status, "Model loading failed. Cannot generate captions.")
 
@@ -355,6 +355,7 @@ if GUI_AVAILABLE:
             self._clear_caption_display()
             
             url_text = self.url_entry.get().strip()
+            max_tokens = self._get_max_tokens_from_ui()
 
             if self.selected_file_path:
                 target_path = self.selected_file_path
@@ -370,58 +371,56 @@ if GUI_AVAILABLE:
                 self.generate_button.config(state=tk.NORMAL)
                 return
 
-            # Run captioning in a new thread
-            threading.Thread(target=self._process_target, args=(target_path, mode), daemon=True).start()
+            threading.Thread(target=self._process_target, args=(target_path, mode, max_tokens), daemon=True).start()
 
-        def _process_target(self, target_path, mode):
-            """Handles the actual processing in a separate thread."""
+        def _process_target(self, target_path, mode, max_tokens_val):
+            # Handles the actual processing in a separate thread.
             try:
                 if mode == "file":
-                    self._process_single_image_ui(target_path)
+                    self._process_single_image_ui(target_path, max_tokens_val=max_tokens_val)
                 elif mode == "folder":
-                    self._process_folder_ui(target_path)
+                    self._process_folder_ui(target_path, max_tokens_val=max_tokens_val)
                 elif mode == "url":
-                    self._process_url_ui(target_path)
+                    self._process_url_ui(target_path, max_tokens_val=max_tokens_val)
             finally:
-                # Re-enable button on the main thread
                 self.root.after(0, self.generate_button.config, {"state": tk.NORMAL})
                 self.root.after(0, self._update_status, "Processing complete. Ready for next task.")
 
 
-        def _process_single_image_ui(self, image_path, is_url=False, original_url=None):
-            self.root.after(0, self._update_status, f"Processing: {os.path.basename(image_path)}...")
+        def _process_single_image_ui(self, image_path_or_obj, is_url=False, original_url=None, max_tokens_val=DEFAULT_MAX_NEW_TOKENS):
+            log_name = original_url if is_url else os.path.basename(image_path_or_obj)
+            self.root.after(0, self._update_status, f"Processing: {log_name} (max_tokens: {max_tokens_val})...")
             self.root.after(0, self.progress_bar.config, {"value": 0, "maximum": 100, "mode": "indeterminate"})
             self.root.after(0, self.progress_bar.start)
             
             try:
-                if is_url: # image_path is actually a PIL Image object for URL
-                    img_obj = image_path 
-                    log_name = original_url
-                    self.root.after(0, self._display_image_preview, img_obj) # Display downloaded URL image
-                else: # image_path is a file path
-                    img_obj = Image.open(image_path).convert("RGB")
-                    log_name = os.path.basename(image_path)
-                    self.root.after(0, self._display_image_preview, image_path) # Display local file image
+                if is_url: 
+                    img_obj = image_path_or_obj 
+                    self.root.after(0, self._display_image_preview, img_obj) 
+                else: 
+                    img_obj = Image.open(image_path_or_obj).convert("RGB")
+                    self.root.after(0, self._display_image_preview, image_path_or_obj) 
 
             except FileNotFoundError:
-                self.root.after(0, self._update_status, f"Error: Image file not found: {image_path}")
+                self.root.after(0, self._update_status, f"Error: Image file not found: {log_name}")
                 return
             except UnidentifiedImageError:
-                self.root.after(0, self._update_status, f"Error: Cannot identify image: {image_path}")
+                self.root.after(0, self._update_status, f"Error: Cannot identify image: {log_name}")
                 return
             except Exception as e:
-                self.root.after(0, self._update_status, f"Error loading image {os.path.basename(image_path)}: {e}")
+                self.root.after(0, self._update_status, f"Error loading image {log_name}: {e}")
                 return
             
-            self.root.after(0, self._clear_caption_display) # Clear previous caption
+            self.root.after(0, self._clear_caption_display) 
             caption = generate_caption_for_image_core(
                 img_obj, PROCESSOR, MODEL, 
+                max_new_tokens_val=max_tokens_val,
                 ui_update_callback=lambda chunk: self.root.after(0, self._update_caption_display, chunk),
                 image_name_for_log=log_name
             )
 
             if caption:
-                saved_path = save_caption_to_file(caption, original_url if is_url else image_path, is_url_image=is_url)
+                saved_path = save_caption_to_file(caption, original_url if is_url else image_path_or_obj, is_url_image=is_url)
                 if saved_path:
                     self.root.after(0, self._update_status, f"Caption for {log_name} saved to {os.path.basename(saved_path)}")
                 else:
@@ -431,7 +430,7 @@ if GUI_AVAILABLE:
             self.root.after(0, self.progress_bar.config, {"value": 0, "mode": "determinate"})
 
 
-        def _process_folder_ui(self, folder_path):
+        def _process_folder_ui(self, folder_path, max_tokens_val=DEFAULT_MAX_NEW_TOKENS):
             self.root.after(0, self._update_status, f"Processing folder: {os.path.basename(folder_path)}...")
             image_files = [
                 os.path.join(folder_path, f) for f in os.listdir(folder_path)
@@ -444,45 +443,36 @@ if GUI_AVAILABLE:
             self.root.after(0, self.progress_bar.config, {"value": 0, "maximum": len(image_files), "mode": "determinate"})
             
             for i, image_file_path in enumerate(image_files):
-                self.root.after(0, self._clear_caption_display) # Clear for next image
+                self.root.after(0, self._clear_caption_display) 
                 self.root.after(0, self._update_status, f"Processing {i+1}/{len(image_files)}: {os.path.basename(image_file_path)}")
                 
-                # Process single image (this will also update preview)
-                self._process_single_image_ui(image_file_path, is_url=False) # is_url is False for local files
+                self._process_single_image_ui(image_file_path, is_url=False, max_tokens_val=max_tokens_val) 
                 
                 self.root.after(0, self.progress_bar.config, {"value": i + 1})
-                # Small delay to allow UI to update if many small images
-                # time.sleep(0.1) # Optional: if UI seems stuck on rapid updates
 
             self.root.after(0, self._update_status, f"Folder processing complete for {os.path.basename(folder_path)}.")
 
 
-        def _process_url_ui(self, image_url):
+        def _process_url_ui(self, image_url, max_tokens_val=DEFAULT_MAX_NEW_TOKENS):
             self.root.after(0, self._update_status, f"Downloading image from URL: {image_url[:50]}...")
             self.root.after(0, self.progress_bar.config, {"value": 0, "maximum": 100, "mode": "indeterminate"})
             self.root.after(0, self.progress_bar.start)
-            self.root.after(0, self._clear_image_preview) # Clear previous preview
+            self.root.after(0, self._clear_image_preview) 
 
             try:
                 response = requests.get(image_url, stream=True, timeout=10)
-                response.raise_for_status() # Check for HTTP errors
-                
-                # Check content type if possible
+                response.raise_for_status() 
                 content_type = response.headers.get('content-type')
                 if content_type and not content_type.lower().startswith('image/'):
                     raise ValueError(f"URL does not point to a direct image (Content-Type: {content_type})")
-
                 img_bytes = response.content
                 img_obj = Image.open(BytesIO(img_bytes)).convert("RGB")
-                
-                # Process this PIL image object
-                self._process_single_image_ui(img_obj, is_url=True, original_url=image_url)
-
+                self._process_single_image_ui(img_obj, is_url=True, original_url=image_url, max_tokens_val=max_tokens_val)
             except requests.exceptions.RequestException as e:
                 self.root.after(0, self._update_status, f"URL Error: {e}")
             except UnidentifiedImageError:
                 self.root.after(0, self._update_status, "URL Error: Content is not a valid image format.")
-            except ValueError as e: # For content type check
+            except ValueError as e: 
                 self.root.after(0, self._update_status, f"URL Error: {e}")
             except Exception as e:
                 self.root.after(0, self._update_status, f"Error processing URL {image_url[:50]}...: {e}")
@@ -491,12 +481,13 @@ if GUI_AVAILABLE:
                 self.root.after(0, self.progress_bar.config, {"value": 0, "mode": "determinate"})
 
 # --- Main Execution Logic (CLI or UI) ---
-def main_cli(args):
+def main_cli(cli_args):
     """Handles Command Line Interface operations."""
-    if not load_model_and_processor(args.device, args.dtype):
-        return # Exit if model loading fails
+    if not load_model_and_processor(cli_args.device, cli_args.dtype):
+        return 
 
-    input_path = args.input_path
+    input_path = cli_args.input_path
+    max_tokens = cli_args.max_tokens
     processed_count = 0
 
     if os.path.isfile(input_path):
@@ -504,14 +495,14 @@ def main_cli(args):
             print(f"Processing single image file: {input_path}")
             try:
                 img = Image.open(input_path).convert("RGB")
-                caption = generate_caption_for_image_core(img, PROCESSOR, MODEL, image_name_for_log=os.path.basename(input_path))
+                caption = generate_caption_for_image_core(
+                    img, PROCESSOR, MODEL, 
+                    max_new_tokens_val=max_tokens,
+                    image_name_for_log=os.path.basename(input_path)
+                )
                 if caption:
                     save_caption_to_file(caption, input_path)
                     processed_count +=1
-            except FileNotFoundError:
-                print(f"  Error: Image file not found at {input_path}")
-            except UnidentifiedImageError:
-                print(f"  Error: Cannot identify image file {input_path}.")
             except Exception as e:
                 print(f"  Error processing image {input_path}: {e}")
         else:
@@ -526,54 +517,42 @@ def main_cli(args):
                 print(f"\nProcessing image {image_files_found}: {item_name}")
                 try:
                     img = Image.open(item_path).convert("RGB")
-                    caption = generate_caption_for_image_core(img, PROCESSOR, MODEL, image_name_for_log=item_name)
+                    caption = generate_caption_for_image_core(
+                        img, PROCESSOR, MODEL, 
+                        max_new_tokens_val=max_tokens,
+                        image_name_for_log=item_name
+                    )
                     if caption:
                         save_caption_to_file(caption, item_path)
                         processed_count +=1
-                except FileNotFoundError: # Should not happen if os.path.isfile is true, but good practice
-                    print(f"  Error: Image file not found at {item_path}")
-                except UnidentifiedImageError:
-                    print(f"  Error: Cannot identify image file {item_path}.")
                 except Exception as e:
                     print(f"  Error processing image {item_path}: {e}")
-
             elif os.path.isfile(item_path):
                 print(f"  Skipping non-image file (or unsupported extension): {item_name} in folder.")
         if image_files_found == 0:
             print(f"No supported image files found in directory: {input_path}")
     else:
         print(f"Error: Input path '{input_path}' is not a valid file or directory.")
-
     print(f"\nProcessing complete. {processed_count} caption(s) generated.")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate captions for images using the SmolVLM model. Runs GUI if no args.")
+    parser = argparse.ArgumentParser(description="Generate captions for images. Runs GUI if no args.")
     parser.add_argument("input_path", type=str, nargs='?', default=None, help="Path to an image file or folder (CLI mode).")
     parser.add_argument("--device", type=str, default="auto", help="Device for model: 'cuda', 'cpu', 'auto' (CLI mode).")
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["bfloat16", "float16", "float32"], help="Torch dtype (CLI mode).")
-    
-    # Check if running in a context that might not have display (like some CI/CD)
-    # or if Tkinter failed to import
-    can_run_gui = GUI_AVAILABLE
-    if not can_run_gui:
-        print("GUI is unavailable (Tkinter might be missing or display not found).")
-
-    # If CLI arguments are provided (specifically input_path), run in CLI mode.
-    # Otherwise, try to run GUI mode.
-    # A more robust check for CLI mode would be if any args beyond the script name are present.
-    # sys.argv[1:] would be non-empty if any args are passed.
+    parser.add_argument("--max_tokens", type=int, default=DEFAULT_MAX_NEW_TOKENS, help=f"Maximum number of new tokens to generate for caption (CLI mode). Default: {DEFAULT_MAX_NEW_TOKENS}")
     
     args = parser.parse_args()
 
-    if args.input_path: # If input_path is given, assume CLI mode
+    if args.input_path: 
         print("Running in Command-Line Interface (CLI) mode.")
         main_cli(args)
-    elif can_run_gui:
+    elif GUI_AVAILABLE:
         print("No input path provided via CLI. Attempting to launch GUI mode...")
         root = tk.Tk()
         app = CaptionApp(root)
         root.mainloop()
     else:
-        print("No input path provided and GUI is unavailable. Please provide an input_path for CLI mode.")
+        print("GUI is unavailable (Tkinter might be missing or display not found) and no input_path provided for CLI mode.")
         parser.print_help()
