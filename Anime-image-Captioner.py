@@ -32,6 +32,9 @@ except ImportError:
 # python Anime-image-Captioner.py /path/to/image.jpg --max_tokens 768
 # python Anime-image-Captioner.py /path/to/folder/ --max_tokens 1024
 
+# Important this script downloads the model from HuggingFace and saves it to the .cache folder
+# C:\Users\username\.cache\huggingface\hub\models--Andres77872--SmolVLM-500M-anime-caption-v0.2
+
 # --- Configuration ---
 BASE_MODEL_ID = "Andres77872/SmolVLM-500M-anime-caption-v0.2"
 SUPPORTED_IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')
